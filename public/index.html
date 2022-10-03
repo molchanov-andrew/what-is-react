@@ -14,159 +14,173 @@
         <div id="root"></div>
 
         <!--<script type="text/babel">-->
+        <!--<script>-->
         <script type="text/jsx">
-            const api = {
-                get(url) {
-                    switch (url) {
-                        case '/lots':
-                            return new Promise((resolve) => {
-                                setTimeout(() => {
-                                    resolve([
-                                        {
-                                            id: 1,
-                                            name: 'Apple',
-                                            description: 'Apple description',
-                                            price: 16
-                                        },
-                                        {
-                                            id: 2,
-                                            name: 'Orange',
-                                            description: 'Orange description',
-                                            price: 41
-                                        }
-                                    ]);
-                                }, 1000);
-                            });
-                        default:
-                            throw new Error('Unknown address');
-                    }
-                }
-            };
-            var state = {
-                time: new Date(),
-                lots: null
-            };
+			const api = {
+				get(url) {
+					switch (url) {
+						case '/lots':
+							return new Promise((resolve) => {
+								setTimeout(() => {
+									resolve([
+										{
+											id: 1,
+											name: 'Apple',
+											description: 'Apple description',
+											price: 16
+										},
+										{
+											id: 2,
+											name: 'Orange',
+											description: 'Orange description',
+											price: 41
+										}
+									]);
+								}, 1000);
+							});
+						default:
+							throw new Error('Unknown address');
+					}
+				}
+			};
 
-            function App( { state }){
-                return React.createElement('div', {className: 'app'},
-                        React.createElement(Header),
-                        React.createElement(Clock, {time: state.time}),
-                        React.createElement(Lots, {lots: state.lots}),
-                        )
-            }
+			const initialState = {
+				time: new Date(),
+				lots: null
+			};
 
-            function Header() {
+			class Store {
+				constructor(initialState) {
+					this.state = initialState
+					this.listeners = []
+				}
+
+				subscribe(callback) {
+					this.listeners.push(callback)
+				}
+				getState() {
+					return this.state
+				}
+				changeState(diff) {
+					this.state = {
+						...this.state,
+						...(typeof diff === 'function' ? diff(this.state) : diff)
+					}
+					this.listeners.forEach((listener) => {
+						listener()
+					})
+				}
+			}
+
+			const store = new Store(initialState)
+
+			function App( { state }){
+				return React.createElement('div', {className: 'app'},
+						React.createElement(Header),
+						React.createElement(Clock, {time: state.time}),
+						React.createElement(Lots, {lots: state.lots}),
+						)
+			}
+
+			function Header() {
 //                return React.createElement('header', {className: 'header'}, React.createElement(Logo))
-                return (
-                    <header className='header'>
-                        <Logo />
-                    </header>
-                )
-            }
+				return (
+									<header className='header'>
+			<Logo />
+			</header>
+						)
+			}
 
 
-            function Logo() {
+			function Logo() {
 //                return React.createElement('img', {className: 'logo', src: 'logo.png'})
-                return <img className='logo' src='logo.png'/>
-            }
+				return <img className='logo' src='logo.png'/>
+			}
 
 
-            function Clock( { time }) {
+			function Clock( { time }) {
 
-                const isDay = time.getHours() >= 7 && time.getHours() <= 21;
+				const isDay = time.getHours() >= 7 && time.getHours() <= 21;
 
-                return React.createElement('div', {className: 'clock'},
-                        React.createElement('span', {className: 'value'}, time.toLocaleString()),
-                        React.createElement('span', {className: isDay ? 'icon day' : 'icon night'}),
-                        )
-            }
+				return React.createElement('div', {className: 'clock'},
+						React.createElement('span', {className: 'value'}, time.toLocaleString()),
+						React.createElement('span', {className: isDay ? 'icon day' : 'icon night'}),
+						)
+			}
 
-            function Loading() {
-                return React.createElement('div', {className: 'loading'}, 'Loading...')
-            }
+			function Loading() {
+				return React.createElement('div', {className: 'loading'}, 'Loading...')
+			}
 
-            function Lots( { lots }) {
-                if (lots === null) {
+			function Lots( { lots }) {
+				if (lots === null) {
 //                    return React.createElement(Loading)
-                       return <Loading />
-                }
-
+					return <Loading />
+				}
 //                return React.createElement('div', {className: 'lots'},
 //                        lots.map((lot) => (React.createElement(Lot, {lot, key: lot.id}))))
-                    return <div className='lots'>{ lots.map((lot) => <Lot lot={lot} key={lot.id} />)}</div>
-            }
+				return (<div className='lots'>{ lots.map((lot) => <Lot lot={lot} key={lot.id} />)}</div>)
+			}
 
-            function Lot( { lot }){
-                return (
-<article className='lot'>
-    <div    className='price'>{ lot.price }</div>
-    <h1>{ lot.name }</h1>
-    <p>{ lot.description }</p>
-</article>
-                     )
-
+			function Lot( { lot }){
+				return (<article className='lot'><div className='price'>{ lot.price }</div><h1>{ lot.name }</h1><p>{ lot.description }</p></article>)
 //    return React.createElement('article', {className: 'lot', key},
 //                        React.createElement('div', {className: 'price'}, lot.price),
 //                        React.createElement('h1', {}, lot.name),
 //                        React.createElement('p', {}, lot.description)
 //                        )
-            }
+			}
 
-            function renderView(state) {
-                ReactDOM.render(<App state={state} />,
-                document.getElementById('root'));
-            }
+			function renderView(state) {
+				ReactDOM.render(<App state={state} />,
+						document.getElementById('root'));
+			}
 
-            renderView(state);
+			store.subscribe(() => {
+				renderView(store.getState())
+			})
+			renderView(store.getState());
 
-            setInterval(() => {
-                state = {
-                    ...state,
-                    time: new Date()
-                };
-                renderView(state);
-            }, 1000);
+			setInterval(() => {
+				store.changeState({
+					time: new Date()
+				});
+				renderView(store.getState());
+			}, 1000);
 
-            api.get('/lots').then((lots) => {
-                state = {
-                    ...state,
-                    lots
-                };
+			api.get('/lots').then((lots) => {
+				store.changeState({lots})
 
-                renderView(state);
-
-                const onPrice = (data) => {
-                    state = {
-                        ...state,
-                        lots: state.lots.map((lot) => {
-                            if (lot.id == data.id) {
-                                return {
-                                    ...lot,
-                                    price: data.price
-                                };
-                            }
-                            return lot;
-                        })
-                    };
-                    renderView(state);
-                };
-                lots.forEach((lot) => {
-                    stream.subscribe(`price-${lot.id}`, onPrice);
-                });
-            });
-            const stream = {
-                subscribe(channel, listener) {
-                                    const match = /price-(\d+)/.exec(channel);
-                                    if (match) {
-                                        setInterval(() => {
-                                            listener({
-                                                id: parseInt(match[1]),
-                                                price: Math.round((Math.random() * 10 + 30))
-                                            });
-                                        }, 400);
-                                    }
-                                }
-                            };
+				const onPrice = (data) => {
+					store.changeState((state) => ({
+							lots: state.lots.map((lot) => {
+								if (lot.id == data.id) {
+									return {
+										...lot,
+										price: data.price
+									};
+								}
+								return lot
+							})
+						}))
+				};
+				lots.forEach((lot) => {
+					stream.subscribe(`price-${lot.id}`, onPrice);
+				});
+			});
+			const stream = {
+				subscribe(channel, listener) {
+					const match = /price-(\d+)/.exec(channel);
+					if (match) {
+						setInterval(() => {
+							listener({
+								id: parseInt(match[1]),
+								price: Math.round((Math.random() * 10 + 30))
+							});
+						}, 400);
+					}
+				}
+			};
         </script>
         <!--        <script>
         function convertToBrowserJs(code) {
@@ -175,12 +189,12 @@
 
 const scripts = document.querySelectorAll('script[type="text/own"]')
         scripts.forEach(el => {
-                const js = convertToBrowserJs(el.text)
+             const js = convertToBrowserJs(el.text)
 
     const script = document.createElement('script')
     script.text = js
     document.querySelector('body').append(script)
 })
-        </script>-->
+ </script>-->
     </body>
 </html>
